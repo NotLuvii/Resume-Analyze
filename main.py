@@ -6,14 +6,14 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import matplotlib.pyplot as plt
 import pandas as pd
 from parser import extract_text
-from analyzer import extract_keywords_pipeline, analyze_resume
+from analyzer import *
 
 
 class ResumeAnalyzerApp:
     def __init__(self, root):
         self.root = root
         self.root.title("Resume Analyzer")
-        self.root.geometry("1200x800")  # Adjust resolution
+        self.root.geometry("1920x1080")  # Adjust resolution
         self.root.minsize(1000, 600)
 
         # Data storage
@@ -45,11 +45,15 @@ class ResumeAnalyzerApp:
         self.graph_frame = ttk.Frame(self.notebook)
         self.notebook.add(self.graph_frame, text="Graphical Reports")
 
-        # Job Keywords Widgets
-        self.setup_job_keywords_tab()
+        # Interview Insights Tab
+        self.interview_frame = ttk.Frame(self.notebook)
+        self.notebook.add(self.interview_frame, text="Interview Insights")
 
-        # Resume Analysis Widgets
+        # Setup tabs
+        self.setup_job_keywords_tab()
         self.setup_resume_analysis_tab()
+        self.setup_interview_tab()
+
 
     def setup_job_keywords_tab(self):
         # Job Description Input
@@ -111,20 +115,24 @@ class ResumeAnalyzerApp:
                 font=("Arial", 10), wraplength=900, justify="left"
             ).pack(anchor="w")
 
+        # Update interview preparation insights
+        self.display_interview_questions(job_description)
+
         # Re-analyze resumes
         self.reanalyze_resumes()
-
+    
     def handle_drop(self, event):
-        # Handle dropped files
         file_paths = event.data.split()
         for file_path in file_paths:
             try:
-                text = extract_text(file_path)
+                text = extract_text(file_path)  # Extract text from the resume
                 analysis = analyze_resume(text, self.job_keywords)
+  
+                
                 self.results.append({
                     "File Name": os.path.basename(file_path),
                     "File Path": file_path,
-                    **analysis
+                    **analysis,
                 })
             except Exception as e:
                 self.results.append({"File Name": os.path.basename(file_path), "Error": str(e)})
@@ -212,6 +220,43 @@ class ResumeAnalyzerApp:
                     self.results.append({"File Name": os.path.basename(file_path), "Error": str(e)})
 
         self.display_resume_results()
+        
+
+
+    def setup_interview_tab(self):
+    # Create a canvas to allow scrolling
+        self.interview_canvas = tk.Canvas(self.interview_frame)
+        self.scrollbar = ttk.Scrollbar(self.interview_frame, orient="vertical", command=self.interview_canvas.yview)
+        self.scrollable_frame = ttk.Frame(self.interview_canvas)
+
+        # Configure the canvas
+        self.scrollable_frame.bind(
+            "<Configure>",
+            lambda e: self.interview_canvas.configure(scrollregion=self.interview_canvas.bbox("all"))
+        )
+        self.interview_canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
+        self.interview_canvas.configure(yscrollcommand=self.scrollbar.set)
+
+        # Pack widgets
+        self.scrollbar.pack(side="right", fill="y")
+        self.interview_canvas.pack(side="left", fill="both", expand=True)
+
+    def display_interview_questions(self, job_description):
+        # Generate interview questions
+        questions = generate_interview_questions(job_description)
+
+        # Clear previous content
+        for widget in self.scrollable_frame.winfo_children():
+            widget.destroy()
+
+        if questions:
+            ttk.Label(self.scrollable_frame, text="Suggested Questions:", font=("Arial", 12, "bold")).pack(anchor="w", pady=5)
+            for question in questions:
+                ttk.Label(self.scrollable_frame, text=f"- {question}", font=("Arial", 10), wraplength=1000, justify="left").pack(anchor="w", pady=2)
+        else:
+            ttk.Label(self.scrollable_frame, text="No relevant topics or questions found.", font=("Arial", 12)).pack()
+
+
 
 
 if __name__ == "__main__":

@@ -2,6 +2,7 @@ import re
 import spacy
 from sklearn.feature_extraction.text import ENGLISH_STOP_WORDS
 import matplotlib.pyplot as plt
+import language_tool_python
 # Load spaCy's English model
 nlp = spacy.load("en_core_web_sm")
 
@@ -244,4 +245,180 @@ def analyze_resume(text, job_keywords):
         "Relevance Score": weighted_score
     }
     
+def parse_certifications(resume_text):
+    # Use regex to find certifications (e.g., AWS Certified, Google Cloud Certified)
+    certification_patterns = [
+        r"(AWS Certified.*)",
+        r"(Google Cloud Certified.*)",
+        r"(Certified.*Professional.*)",
+    ]
+    certifications = []
+    for pattern in certification_patterns:
+        certifications += re.findall(pattern, resume_text, flags=re.IGNORECASE)
+    return list(set(certifications))
 
+
+def parse_education(resume_text):
+    # Extract degrees, institutions, and graduation years
+    degree_patterns = [
+        r"(Bachelor's|Master's|PhD|Diploma|Associate Degree).*",
+        r"(B\.Sc\.|M\.Sc\.|MBA|B\.Tech|M\.Tech).*",
+    ]
+    institution_patterns = [
+        r"([A-Z][a-z]+\sUniversity)",
+        r"([A-Z][a-z]+ Institute of Technology)",
+    ]
+    year_pattern = r"(19|20)\d{2}"
+
+    degrees = []
+    institutions = []
+    years = []
+
+    for pattern in degree_patterns:
+        degrees += re.findall(pattern, resume_text, flags=re.IGNORECASE)
+
+    for pattern in institution_patterns:
+        institutions += re.findall(pattern, resume_text, flags=re.IGNORECASE)
+
+    years += re.findall(year_pattern, resume_text)
+
+    return {"Degrees": list(set(degrees)), "Institutions": list(set(institutions)), "Years": list(set(years))}
+
+
+def parse_work_experience(resume_text):
+    # Extract job titles, companies, and durations
+    sentences = sent_tokenize(resume_text)
+    job_title_patterns = [
+        r"(Software Engineer|Data Scientist|Project Manager|Developer|Analyst).*",
+    ]
+    company_patterns = [
+        r"(at [A-Z][a-z]+.*)",
+    ]
+    duration_pattern = r"(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s\d{4}\s(to|-\s)\s(?:Present|\d{4})"
+
+    job_titles = []
+    companies = []
+    durations = []
+
+    for sentence in sentences:
+        for pattern in job_title_patterns:
+            job_titles += re.findall(pattern, sentence, flags=re.IGNORECASE)
+
+        for pattern in company_patterns:
+            companies += re.findall(pattern, sentence, flags=re.IGNORECASE)
+
+        durations += re.findall(duration_pattern, sentence, flags=re.IGNORECASE)
+
+    return {"Job Titles": list(set(job_titles)), "Companies": list(set(companies)), "Durations": list(set(durations))}
+
+
+def parse_social_links(resume_text):
+    # Extract LinkedIn, GitHub, and portfolio links
+    linkedin_pattern = r"https?://(www\.)?linkedin\.com/in/[a-zA-Z0-9-_/]+"
+    github_pattern = r"https?://(www\.)?github\.com/[a-zA-Z0-9-_/]+"
+    portfolio_pattern = r"https?://[a-zA-Z0-9-_]+\.(com|net|org)/?[a-zA-Z0-9-_/]*"
+
+    linkedin_links = re.findall(linkedin_pattern, resume_text, flags=re.IGNORECASE)
+    github_links = re.findall(github_pattern, resume_text, flags=re.IGNORECASE)
+    portfolio_links = re.findall(portfolio_pattern, resume_text, flags=re.IGNORECASE)
+
+    return {
+        "LinkedIn": list(set(linkedin_links)),
+        "GitHub": list(set(github_links)),
+        "Portfolios": list(set(portfolio_links)),
+    }
+
+
+def generate_interview_questions(job_description):
+    """
+    Analyze job description keywords and suggest potential interview questions.
+    """
+    keywords = extract_keywords_pipeline(job_description)  # Reuse your existing keyword extraction function
+    questions = []
+
+    # Technical Skills-Based Questions
+    for skill in keywords["technical_skills"]:
+        questions.extend([
+            f"Can you explain your experience with {skill}?",
+            f"How have you applied {skill} in previous projects?",
+            f"What challenges have you faced while using {skill}?",
+            f"Can you describe an innovative way you've used {skill} to solve a problem?",
+            f"How would you improve your proficiency with {skill}?",
+            f""
+        ])
+
+    # Soft Skills-Based Questions
+    for skill in keywords["soft_skills"]:
+        questions.extend([
+            f"How do you demonstrate {skill} in a team setting?",
+            f"Can you provide an example where {skill} helped you overcome a challenge?",
+            f"How would you rate your {skill}, and why?",
+            f"How do you ensure consistent {skill} in high-pressure environments?",
+            f"Describe a situation where {skill} was crucial to the success of a project.",
+            f""
+        ])
+
+    # General Career-Related Questions
+    questions.extend([
+        "Why are you interested in this role?",
+        "What do you know about our company?",
+        "How do you stay updated with the latest trends in your field?",
+        "What motivates you to perform well in a job?",
+        "How do you see yourself growing in this position over the next 3–5 years?"
+    ])
+
+    # Situational and Behavioral Questions
+    questions.extend([
+        "Describe a time when you had to lead a team under tight deadlines.",
+        "Can you share an example of a challenging problem you solved?",
+        "How do you handle conflicts within a team?",
+        "What would you do if you disagreed with your manager’s decision?",
+        "Can you provide an example of a project where you worked collaboratively with a cross-functional team?"
+    ])
+
+    # Questions About Work Experience
+    questions.extend([
+        "Can you walk us through a key project you worked on?",
+        "What was your role in the project, and how did you contribute to its success?",
+        "What would you say is your greatest professional achievement?",
+        "How do you prioritize tasks when working on multiple projects simultaneously?",
+        "What have you learned from a failure in your previous roles?"
+    ])
+
+    # Questions for Leadership and Initiative
+    questions.extend([
+        "Have you ever taken initiative to improve a process or solve a problem?",
+        "Can you share an example of how you motivated your team during a tough project?",
+        "How do you ensure effective communication as a team leader?",
+        "What strategies do you use to delegate tasks effectively?",
+        "Describe a time you had to make a difficult decision as a leader."
+    ])
+
+    # Technical Problem-Solving
+    questions.extend([
+        "How would you debug a complex technical issue?",
+        "Can you describe your process for reviewing code?",
+        "How do you stay updated with new technologies or programming languages?",
+        "What steps would you take to optimize system performance?",
+        "Describe a time you worked on integrating new technologies into an existing system."
+    ])
+
+    # Teamwork and Collaboration
+    questions.extend([
+        "How do you approach working with team members who have different work styles?",
+        "Can you share an example of a successful collaboration?",
+        "How do you handle disagreements or conflicting ideas within a team?",
+        "What role do you usually take in team projects?",
+        "How do you ensure your contributions align with team goals?"
+    ])
+
+    # Questions on Learning and Adaptability
+    questions.extend([
+        "Can you share a time when you had to learn a new skill quickly?",
+        "How do you adapt to changes in project requirements?",
+        "What steps do you take to improve your professional skills?",
+        "Describe a time when you had to pivot from an original plan to achieve a goal.",
+        "How do you handle feedback or criticism from peers or managers?"
+    ])
+
+    return questions
