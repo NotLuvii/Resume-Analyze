@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en"
+>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resume Analyzer</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Resume Analyzer</h1>
+        <div class="tab-content">
+            <textarea id="job-description" placeholder="Enter job description"></textarea>
+        </div>
+        <form id="upload-form" enctype="multipart/form-data">
+            <input type="file" id="resume" name="resume" accept=".pdf, .docx" />
+            <button type="button" id="analyze-btn">Analyze</button>
+        </form>
+        <div id="results">
+            <h2>Analysis Results</h2>
+            <div id="analysis-container">
+                <div class="result-section">
+                    <h3>Gap Analysis</h3>
+                    <p><strong>Missing Soft Skills:</strong></p>
+                    <ul id="missing-soft"></ul>
+                    <p><strong>Missing Technical Skills:</strong></p>
+                    <ul id="missing-technical"></ul>
+                </div>
+                <div class="result-section">
+                    <h3>Matched Keywords</h3>
+                    <p><strong>Matched Soft Skills:</strong></p>
+                    <ul id="matched-soft"></ul>
+                    <p><strong>Matched Technical Skills:</strong></p>
+                    <ul id="matched-technical"></ul>
+                </div>
+            </div>
+            <h2>Suggested Interview Questions</h2>
+            <ul id="questions"></ul>
+        </div>
+        
+    </div>
+    <script src="scripts.js"></script>
+</body>
+</html>

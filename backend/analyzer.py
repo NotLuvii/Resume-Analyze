@@ -3,8 +3,11 @@ import spacy
 from sklearn.feature_extraction.text import ENGLISH_STOP_WORDS
 import matplotlib.pyplot as plt
 import language_tool_python
+import spacy
+from pathlib import Path
+import os
 # Load spaCy's English model
-nlp = spacy.load("en_core_web_sm")
+
 
 # Predefined skill categories
 TECHNICAL_KEYWORDS = [
@@ -121,213 +124,52 @@ SOFT_SKILLS_KEYWORDS = [
 ]
 
 CUSTOM_STOPWORDS = set([
-    "a", "all", "its", "and", "of", "the", "for", "to", "an", "in", "with", "on", "at", 
-    "job", "description", "role", "responsibilities", "requirements", "about", 
+    "a", "all", "its", "and", "of", "the", "for", "to", "an", "in", "with", "on", "at",
+    "job", "description", "role", "responsibilities", "requirements", "about",
     "benefits", "skills", "employees", "company", "this", "as", "we"
 ])
 
 def remove_stopwords(text):
-    """
-    Removes stopwords and custom noise words from the text.
-    """
     words = text.lower().split()
     return [word for word in words if word not in ENGLISH_STOP_WORDS and word not in CUSTOM_STOPWORDS]
 
-def extract_noun_phrases(text):
-    """
-    Extracts meaningful noun phrases using spaCy (e.g., "cloud applications").
-    """
-    doc = nlp(text)
-    return [chunk.text.lower() for chunk in doc.noun_chunks]
-
-def match_predefined_keywords(words, predefined_keywords):
-    """
-    Matches words or phrases against a predefined list of technical and soft skills keywords.
-    """
-    return [word for word in words if word in predefined_keywords]
-
-
 def extract_keywords_pipeline(text):
-    """
-    Extracts and categorizes keywords into technical and soft skills.
-    """
-    # Step 1: Clean and preprocess text
-    text = re.sub(r"[^\w\s]", "", text.lower())  # Remove special characters, normalize to lowercase
-    filtered_words = remove_stopwords(text)  # Remove stopwords
-    noun_phrases = extract_noun_phrases(text)  # Extract meaningful multi-word terms
+    text = re.sub(r"[^\w\s]", "", text.lower())
+    filtered_words = remove_stopwords(text)
 
-    # Step 2: Combine keywords
-    combined_keywords = set(filtered_words + noun_phrases)
-
-    # Step 3: Match and categorize
-    technical_skills = [
-        keyword for keyword in combined_keywords if keyword in TECHNICAL_KEYWORDS
-    ]
-    soft_skills = [
-        keyword for keyword in combined_keywords if keyword in SOFT_SKILLS_KEYWORDS
-    ]
+    technical_skills = [word for word in filtered_words if word in TECHNICAL_KEYWORDS]
+    soft_skills = [word for word in filtered_words if word in SOFT_SKILLS_KEYWORDS]
 
     return {
-        "technical_skills": sorted(technical_skills),
-        "soft_skills": sorted(soft_skills)
+        "technical_skills": sorted(set(technical_skills)),
+        "soft_skills": sorted(set(soft_skills))
     }
 
-
 def calculate_keyword_weights(job_keywords):
-    """
-    Dynamically calculate weights for each keyword based on frequency in the job description.
-    """
     keyword_weights = {}
     all_keywords = job_keywords["technical_skills"] + job_keywords["soft_skills"]
-    
-    # Count frequency of each keyword in the job description
     for keyword in all_keywords:
         count = job_keywords["text"].lower().count(keyword.lower())
         keyword_weights[keyword] = count
-
-    # Normalize weights to ensure they sum up to 1
     total_count = sum(keyword_weights.values())
     if total_count > 0:
         for keyword in keyword_weights:
             keyword_weights[keyword] /= total_count
-
     return keyword_weights
 
-def weighted_relevance_score(matched_keywords, keyword_weights):
-    """
-    Calculates a weighted relevance score based on dynamically calculated weights.
-    """
-    total_weight = sum(keyword_weights.values())
-    achieved_weight = sum(keyword_weights.get(kw, 0) for kw in matched_keywords)
-
-    return (achieved_weight / total_weight * 100) if total_weight > 0 else 0
-
-def gap_analysis(resume_keywords, job_keywords):
-    """
-    Performs gap analysis to identify missing keywords in resumes.
-    Args:
-        resume_keywords (dict): Extracted keywords from the resume.
-        job_keywords (dict): Keywords extracted from the job description.
-
-    Returns:
-        dict: Missing technical and soft skills.
-    """
-    missing_technical = set(job_keywords["technical_skills"]) - set(resume_keywords["technical_skills"])
-    missing_soft = set(job_keywords["soft_skills"]) - set(resume_keywords["soft_skills"])
-    
-    return {
-        "Missing Technical Skills": sorted(missing_technical),
-        "Missing Soft Skills": sorted(missing_soft)
-    }
-    
-
-def analyze_resume(text, job_keywords):
-    """
-    Analyzes a resume by comparing its content with job description keywords.
-    Includes weighted scoring and gap analysis.
-    """
-    extracted_keywords = extract_keywords_pipeline(text)
+def analyze_resume(resume_text, job_keywords):
+    extracted_keywords = extract_keywords_pipeline(resume_text)
     technical_matched = set(extracted_keywords["technical_skills"]) & set(job_keywords["technical_skills"])
     soft_matched = set(extracted_keywords["soft_skills"]) & set(job_keywords["soft_skills"])
-
-    gap = gap_analysis(extracted_keywords, job_keywords)
-    keyword_weights = calculate_keyword_weights(job_keywords)
-    total_matched = list(technical_matched) + list(soft_matched)
-    weighted_score = weighted_relevance_score(total_matched, keyword_weights)
-
-    return {
-        "Extracted Keywords": extracted_keywords,
-        "Matched Keywords": {
-            "technical_skills": sorted(technical_matched),
-            "soft_skills": sorted(soft_matched)
-        },
-        "Missing Keywords": gap,
-        "Relevance Score": weighted_score
+    gap = {
+        "missing_technical": list(set(job_keywords["technical_skills"]) - technical_matched),
+        "missing_soft": list(set(job_keywords["soft_skills"]) - soft_matched)
     }
-    
-def parse_certifications(resume_text):
-    # Use regex to find certifications (e.g., AWS Certified, Google Cloud Certified)
-    certification_patterns = [
-        r"(AWS Certified.*)",
-        r"(Google Cloud Certified.*)",
-        r"(Certified.*Professional.*)",
-    ]
-    certifications = []
-    for pattern in certification_patterns:
-        certifications += re.findall(pattern, resume_text, flags=re.IGNORECASE)
-    return list(set(certifications))
-
-
-def parse_education(resume_text):
-    # Extract degrees, institutions, and graduation years
-    degree_patterns = [
-        r"(Bachelor's|Master's|PhD|Diploma|Associate Degree).*",
-        r"(B\.Sc\.|M\.Sc\.|MBA|B\.Tech|M\.Tech).*",
-    ]
-    institution_patterns = [
-        r"([A-Z][a-z]+\sUniversity)",
-        r"([A-Z][a-z]+ Institute of Technology)",
-    ]
-    year_pattern = r"(19|20)\d{2}"
-
-    degrees = []
-    institutions = []
-    years = []
-
-    for pattern in degree_patterns:
-        degrees += re.findall(pattern, resume_text, flags=re.IGNORECASE)
-
-    for pattern in institution_patterns:
-        institutions += re.findall(pattern, resume_text, flags=re.IGNORECASE)
-
-    years += re.findall(year_pattern, resume_text)
-
-    return {"Degrees": list(set(degrees)), "Institutions": list(set(institutions)), "Years": list(set(years))}
-
-
-def parse_work_experience(resume_text):
-    # Extract job titles, companies, and durations
-    sentences = sent_tokenize(resume_text)
-    job_title_patterns = [
-        r"(Software Engineer|Data Scientist|Project Manager|Developer|Analyst).*",
-    ]
-    company_patterns = [
-        r"(at [A-Z][a-z]+.*)",
-    ]
-    duration_pattern = r"(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s\d{4}\s(to|-\s)\s(?:Present|\d{4})"
-
-    job_titles = []
-    companies = []
-    durations = []
-
-    for sentence in sentences:
-        for pattern in job_title_patterns:
-            job_titles += re.findall(pattern, sentence, flags=re.IGNORECASE)
-
-        for pattern in company_patterns:
-            companies += re.findall(pattern, sentence, flags=re.IGNORECASE)
-
-        durations += re.findall(duration_pattern, sentence, flags=re.IGNORECASE)
-
-    return {"Job Titles": list(set(job_titles)), "Companies": list(set(companies)), "Durations": list(set(durations))}
-
-
-def parse_social_links(resume_text):
-    # Extract LinkedIn, GitHub, and portfolio links
-    linkedin_pattern = r"https?://(www\.)?linkedin\.com/in/[a-zA-Z0-9-_/]+"
-    github_pattern = r"https?://(www\.)?github\.com/[a-zA-Z0-9-_/]+"
-    portfolio_pattern = r"https?://[a-zA-Z0-9-_]+\.(com|net|org)/?[a-zA-Z0-9-_/]*"
-
-    linkedin_links = re.findall(linkedin_pattern, resume_text, flags=re.IGNORECASE)
-    github_links = re.findall(github_pattern, resume_text, flags=re.IGNORECASE)
-    portfolio_links = re.findall(portfolio_pattern, resume_text, flags=re.IGNORECASE)
-
     return {
-        "LinkedIn": list(set(linkedin_links)),
-        "GitHub": list(set(github_links)),
-        "Portfolios": list(set(portfolio_links)),
+        "matched_technical": list(technical_matched),
+        "matched_soft": list(soft_matched),
+        "gap_analysis": gap
     }
-
 
 def generate_interview_questions(job_description):
     """

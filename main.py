@@ -5,9 +5,10 @@ from tkinterdnd2 import TkinterDnD, DND_FILES
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import matplotlib.pyplot as plt
 import pandas as pd
-from parser import extract_text
-from analyzer import *
-
+from backend.parser import extract_text
+from backend.analyzer import *
+import spacy
+print(spacy.util.get_package_path("en_core_web_sm"))
 
 class ResumeAnalyzerApp:
     def __init__(self, root):
