@@ -26,16 +26,17 @@ The Resume Analyzer is a Python-based application designed to analyze resumes ag
 ### **Prerequisites**
 1. Install Python (version 3.8 or higher).
 2. Install required Python libraries using `pip`:
-   
-   ```
-   pip install -r requirements.txt
-   ```
-If a requirements.txt file is not present, you can install these dependencies manually:
-
 ```
 pip install matplotlib pandas tkinterdnd2 language-tool-python pdfplumber
 ```
-
+3. Run the Flask server:
+```
+python app.py
+```
+4. Open your browser and navigate to:
+```
+http://127.0.0.1:5000
+```
 # **Usage**
 
 ## **Running the Application**
@@ -45,53 +46,40 @@ pip install matplotlib pandas tkinterdnd2 language-tool-python pdfplumber
 
 ## **Functionality**
 
-### **1. Job Keywords Tab**
+### **1. Job Description Entry**
 
 - Enter the job description in the provided text box.
-- Click **Extract Job Keywords** to extract technical and soft skills.
+- Click Analyze to start the analysis.
 
 ### **2. Resume Analysis Tab**
 
-- Drag and drop resumes into the designated area.
+- Upload a resume in PDF or DOCX format using the file upload field.
 - The app will analyze resumes for:
   - Relevance scores.
   - Matched technical and soft skills.
-  - Overall performance against the job description.
 
-### **3. Graphical Reports Tab**
+### **3. Results Display**
 
-- View visualizations for:
-  - Skills frequency across resumes.
-  - Distribution of relevance scores.
+- Analysis Results:
+  - Shows matched and missing skills.
+  - Provides a breakdown of skills into technical and soft categories.
+- Interview Questions:
+  - Displays suggested interview questions based on the job description.
 
-### **4. Interview Preparation Insights Tab**
-
-- Review interview questions generated from the job description.
-- Questions are categorized into technical, soft skills, and general scenarios.
 
 # **Known Issues**
 
-1. **Drag-and-Drop Limitations**:
-   - Dragging unsupported file types or corrupted files may cause errors.
-   - Ensure resumes are in PDF or text format for accurate analysis.
+1. **Resume Formatting**:
+   - Unconventional resume layouts or excessive formatting may impact keyword extraction accuracy.
 
-2. **Keyword Extraction Challenges**:
-   - Certain job descriptions with complex phrasing or unconventional formatting may lead to incomplete keyword extraction.
+2. **Processing Time**:
+   - Analyzing very large resumes can take longer than usual.
 
-3. **Graphical Reports Overlap**:
-   - If too many skills are displayed in the frequency chart, labels may overlap or be hard to read.
+3. **Static Keyword Matching**:
+   - The application uses static keyword lists and does not handle synonyms or alternative phrases dynamically.
 
-4. **Large Resumes Processing Time**:
-   - Analyzing long resumes may take noticeable time, especially if they contain extensive content.
-
-5. **Resolution Dependence**:
-   - The app may not scale well on very small screens or non-standard resolutions.
-
-6. **Customization Limitations**:
-   - Job relevance weights for keywords are static and do not dynamically adjust based on user preferences.
-
-7. **Resume Scoring Inconsistencies**:
-   - Scores may vary significantly for resumes with creative formatting or unconventional layouts.
-
-8. **Scrollbars in Graphical Reports**:
-   - Scrollbars may not function smoothly on some systems when the graphical reports exceed the frame size.
+## **Future Enhancements**
+- Add synonym matching using NLP techniques.
+- Improve UI with modern design frameworks like Tailwind CSS or Material UI.
+- Export results to PDF or CSV.
+- Integrate visualization features for graphical representation of results.
