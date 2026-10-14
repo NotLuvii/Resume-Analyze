@@ -21,6 +21,14 @@
             <h2>Analysis Results</h2>
             <div id="analysis-container">
                 <div class="result-section">
+                    <h3 id="score-label">Relevance Score</h3>
+                    <p class="score-value"><span id="relevance-score">–</span></p>
+                    <div id="score-bar" class="score-bar" role="progressbar" aria-labelledby="score-label" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                        <span id="score-fill" class="score-fill"></span>
+                    </div>
+                    <p class="score-note">The share of the job description's skills that the resume mentions, weighted by how often the job description names each one.</p>
+                </div>
+                <div class="result-section">
                     <h3>Gap Analysis</h3>
                     <p><strong>Missing Soft Skills:</strong></p>
                     <ul id="missing-soft"></ul>

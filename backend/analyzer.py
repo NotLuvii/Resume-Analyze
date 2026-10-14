@@ -5,7 +5,9 @@ import matplotlib.pyplot as plt
 import language_tool_python
 import spacy
 from pathlib import Path
+from collections import Counter
 import os
+from .parser import extract_text
 # Load spaCy's English model
 
 
@@ -133,6 +135,11 @@ def remove_stopwords(text):
     words = text.lower().split()
     return [word for word in words if word not in ENGLISH_STOP_WORDS and word not in CUSTOM_STOPWORDS]
 
+def skill_words(text):
+    """Every word in the text that is a listed skill, repeats included."""
+    text = re.sub(r"[^\w\s]", "", text.lower())
+    return [word for word in remove_stopwords(text) if word in TECHNICAL_KEYWORDS or word in SOFT_SKILLS_KEYWORDS]
+
 def extract_keywords_pipeline(text):
     text = re.sub(r"[^\w\s]", "", text.lower())
     filtered_words = remove_stopwords(text)
@@ -142,20 +149,22 @@ def extract_keywords_pipeline(text):
 
     return {
         "technical_skills": sorted(set(technical_skills)),
-        "soft_skills": sorted(set(soft_skills))
+        "soft_skills": sorted(set(soft_skills)),
+        "weights": calculate_keyword_weights(text)
     }
 
-def calculate_keyword_weights(job_keywords):
-    keyword_weights = {}
-    all_keywords = job_keywords["technical_skills"] + job_keywords["soft_skills"]
-    for keyword in all_keywords:
-        count = job_keywords["text"].lower().count(keyword.lower())
-        keyword_weights[keyword] = count
-    total_count = sum(keyword_weights.values())
-    if total_count > 0:
-        for keyword in keyword_weights:
-            keyword_weights[keyword] /= total_count
-    return keyword_weights
+def calculate_keyword_weights(job_description):
+    """
+    How much each skill in a job description counts towards the relevance score: its share of
+    all the skill mentions in the posting, so a skill named three times weighs three times as
+    much as one named once. The weights add up to 1. Words are counted whole, so "good" doesn't
+    count towards "go".
+    """
+    counts = Counter(skill_words(job_description))
+    total = sum(counts.values())
+    if total == 0:
+        return {}
+    return {skill: count / total for skill, count in counts.items()}
 
 def analyze_resume(resume_text, job_keywords):
     extracted_keywords = extract_keywords_pipeline(resume_text)
@@ -165,10 +174,24 @@ def analyze_resume(resume_text, job_keywords):
         "missing_technical": list(set(job_keywords["technical_skills"]) - technical_matched),
         "missing_soft": list(set(job_keywords["soft_skills"]) - soft_matched)
     }
+    # Relevance: the weighted share of the posting's skills that the resume also mentions, 0-100.
+    weights = job_keywords.get("weights", {})
+    score = 100 * sum(weights.get(skill, 0) for skill in technical_matched | soft_matched)
     return {
         "matched_technical": list(technical_matched),
         "matched_soft": list(soft_matched),
-        "gap_analysis": gap
+        "gap_analysis": gap,
+        "relevance_score": round(score, 1)
+    }
+
+def analyze_resume_file(file_path, job_keywords):
+    """Analyzes a resume file on disk (PDF or DOCX), for the desktop version."""
+    with open(file_path, "rb") as stream:
+        text = extract_text(stream, os.path.basename(file_path))
+    return {
+        "File Name": os.path.basename(file_path),
+        "File Path": file_path,
+        **analyze_resume(text, job_keywords)
     }
 
 def generate_interview_questions(job_description):

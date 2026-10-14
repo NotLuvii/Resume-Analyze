@@ -41,6 +41,12 @@ document.addEventListener("DOMContentLoaded", () => {
                 document.getElementById("matched-technical").innerHTML = "";
                 questionsList.innerHTML = "";
     
+                // Display Relevance Score
+                const score = result.analysis.relevance_score;
+                document.getElementById("relevance-score").textContent = `${score}%`;
+                document.getElementById("score-fill").style.width = `${score}%`;
+                document.getElementById("score-bar").setAttribute("aria-valuenow", score);
+
                 // Display Gap Analysis
                 result.analysis.gap_analysis.missing_soft.forEach((skill) => {
                     const li = document.createElement("li");

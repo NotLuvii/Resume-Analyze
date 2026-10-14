@@ -125,20 +125,15 @@ class ResumeAnalyzerApp:
     def handle_drop(self, event):
         file_paths = event.data.split()
         for file_path in file_paths:
-            try:
-                text = extract_text(file_path)  # Extract text from the resume
-                analysis = analyze_resume(text, self.job_keywords)
-  
-                
-                self.results.append({
-                    "File Name": os.path.basename(file_path),
-                    "File Path": file_path,
-                    **analysis,
-                })
-            except Exception as e:
-                self.results.append({"File Name": os.path.basename(file_path), "Error": str(e)})
+            self.results.append(self.analyze_file(file_path))
 
         self.display_resume_results()
+
+    def analyze_file(self, file_path):
+        try:
+            return analyze_resume_file(file_path, self.job_keywords)
+        except Exception as e:
+            return {"File Name": os.path.basename(file_path), "File Path": file_path, "Error": str(e)}
 
     def display_resume_results(self):
         # Clear previous analysis results
@@ -155,11 +150,14 @@ class ResumeAnalyzerApp:
             table.column(col, width=200, anchor=tk.CENTER)
 
         for result in self.results:
+            if "Error" in result:
+                table.insert("", tk.END, values=[result.get("File Name", "N/A"), "Error", result["Error"], ""])
+                continue
             table.insert("", tk.END, values=[
                 result.get("File Name", "N/A"),
-                f"{result.get('Relevance Score', 0):.2f}%",
-                ", ".join(result["Matched Keywords"].get("technical_skills", [])),
-                ", ".join(result["Matched Keywords"].get("soft_skills", []))
+                f"{result.get('relevance_score', 0):.1f}%",
+                ", ".join(sorted(result.get("matched_technical", []))),
+                ", ".join(sorted(result.get("matched_soft", [])))
             ])
 
         # Update graphical reports
@@ -177,9 +175,11 @@ class ResumeAnalyzerApp:
         relevance_scores = []
 
         for result in self.results:
-            for skill in result["Matched Keywords"]["technical_skills"]:
+            if "Error" in result:
+                continue
+            for skill in result.get("matched_technical", []):
                 skills_count[skill] = skills_count.get(skill, 0) + 1
-            relevance_scores.append(result.get("Relevance Score", 0))
+            relevance_scores.append(result.get("relevance_score", 0))
 
         ax1.bar(skills_count.keys(), skills_count.values(), color="blue")
         ax1.set_title("Percentage of Resumes Matching Specific Skills")
@@ -204,21 +204,12 @@ class ResumeAnalyzerApp:
         """
         Reanalyzes all uploaded resumes with the updated job keywords.
         """
-        self.results = []  # Clear current results
+        previous, self.results = self.results, []
 
-        for result in self.results:
+        for result in previous:
             file_path = result.get("File Path", "")
             if os.path.exists(file_path):
-                try:
-                    text = extract_text(file_path)
-                    analysis = analyze_resume(text, self.job_keywords)
-                    self.results.append({
-                        "File Name": os.path.basename(file_path),
-                        "File Path": file_path,
-                        **analysis
-                    })
-                except Exception as e:
-                    self.results.append({"File Name": os.path.basename(file_path), "Error": str(e)})
+                self.results.append(self.analyze_file(file_path))
 
         self.display_resume_results()
         
